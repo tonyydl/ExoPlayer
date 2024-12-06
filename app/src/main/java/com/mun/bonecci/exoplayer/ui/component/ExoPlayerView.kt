@@ -6,7 +6,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
@@ -22,6 +25,7 @@ fun ExoPlayerView(
     onEndedCallback: (ExoPlayer) -> Unit = {}
 ) {
     val context = LocalContext.current
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
 
     val exoPlayer = remember {
         ExoPlayer.Builder(context).build()
@@ -34,6 +38,20 @@ fun ExoPlayerView(
     LaunchedEffect(mediaSource) {
         exoPlayer.setMediaItem(mediaSource)
         exoPlayer.prepare()
+    }
+
+    DisposableEffect(lifecycle) {
+        val lifecycleObserver = object : DefaultLifecycleObserver {
+            override fun onPause(owner: LifecycleOwner) {
+                exoPlayer.pause()
+            }
+        }
+
+        lifecycle.addObserver(lifecycleObserver)
+
+        onDispose {
+            lifecycle.removeObserver(lifecycleObserver)
+        }
     }
 
     DisposableEffect(Unit) {
